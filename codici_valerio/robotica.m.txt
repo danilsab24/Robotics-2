@@ -1,0 +1,242 @@
+clc
+close all
+%Derivata matrice 
+% J1=diff(J,q1)*q1dot
+% J2=diff(J,q2)*q2dot
+% J3=diff(J,q3)*q3dot
+% Jtot=J1+J2+J3;
+
+%DHM matric contenuti in A, ricordare tabella [alpha,a,d,teta]
+%SNS qsns=pinv(J*W)*v+(eye(4,4)-pinv(J*W)*J)*qn
+%SNS qsnsdot=double(qndot+pinv(J*W)*(xdotdot-J*qndot-Jdot*qdot)) qdot sono
+%condizioni iniziale che ci da lui
+
+% vedere dimensione RG qRG=[pinv(Ja); 0 0]*[1;-(3)^(1/2)]+[-pinv(Ja)*Jb; 1]*H;
+% qPG=double(pinv(J)*[1;0;0.5]+(eye(4,4)-pinv(J)*J)*H) ATTENZIONE
+% DIMENSIONI
+
+% DLS qdls=double(transpose(J)*pinv(J*transpose(J)+(mu^2*)eye(3,3))*v)
+%Task priority qTP=double(pinv(J1)*v1+pinv(J2*P1)*(v2-J2*pinv(J1)*v1));
+%diff(funzione,variabileDaDerivare)
+
+% m=A{1};
+% R01=m(1:3,1:3);
+% p01=m(1:3,4);
+% m=A{2};
+% R12=m(1:3,1:3);
+% p12=m(1:3,4);
+% [w1,v1,vc1]=velocitaTot(R01,'r',p01,[0;0;0],[0;0;0],q1dot,[A;-F ;0]);
+% [w2,v2,vc2]=velocitaTot(R12,'r',p12,w1,v1,q2dot,[-C;0; 0]);
+% [w3,v3,vc3]=velocitaTot(R23,'r',p23,w2,v2,q3dot,[-D;0 ;E]);
+
+
+
+syms q1 q2 q1dot q2dot q3 q3dot q4 q4dot m1 m2 m3 m4  g0 q1dotdot q2dotdot q3dotdot q4dotdot...
+    L1 L2 L3 A1 B C D E F Ix1 Iy1 Iz1 Ix2 Iy2 Iz2 Ix3 Iy3 Iz3 d1 d2 d3 d4 l1 l2 l3 l4 l a1 a2 a3 r1x r1y r1z r2x...
+    I1xx I1xy I1xz I1xy I1yy I1yz I1xz I1yz I1zz I2xx  I2yy I2zz
+
+function [w_new,v_new,vci]=velocitaTot(R,tipo,ri,w_old,v_old,angolodot,rci)
+    %angolodot metto q1dot per esempio
+    %tipo 'r' 'p'
+    % m=A{1};
+    % R01=m(1:3,1:3);
+    % p01=m(1:3,4);
+
+    if(tipo=='r')
+        w_new=simplify(transpose(R)*(w_old+[0;0;angolodot]));
+    else
+        w_new=simplify(transpose(R)*(w_old));
+    end
+     if(tipo=='r')
+        v_new=simplify(transpose(R)*v_old+cross(w_new,transpose(R)*ri));
+    else
+        v_new=simplify(transpose(R)*v_old+cross(w_new,transpose(R)*ri)+transpose(R)*[0;0;angolodot]);
+    end
+    vci=simplify(v_new+cross(w_new,rci));
+end
+
+function Ti=energiaKinetica(vci,w_new,m,I)
+    Ti=simplify((1/2)*m*transpose(vci)*vci+(1/2)*transpose(w_new)*I*w_new);
+end
+
+
+% function [M,Ti]=Lagrange(arrays,sequence,sequenza_angoli)
+% [A,T]=DHMatrix([arrays]);
+% numero_di_righe = size(arrays, 1);
+% w_old=[0;0;0];
+% v_old=[0;0;0];
+% for i = 1:numero_di_righe
+%     matrice=T{i};
+%     R=matrice(1:3, 1:3);
+%     p=matrice(4,1:3);
+%     if(sequence(i)=='r')
+%         w_new=transpose(R)*(w_old+[0;0;sequenza_angoli(i)]);
+%         v_new=transpose(R)*v_old+cross(w_old,transpose(R)*p);
+%     else
+%         w_new=transpose(R)*(w_old);
+%         v_new=transpose(R)*v_old+cross(w_old,transpose(R)*p)+transpose(R)*[0;0;sequenza_angoli(i)];
+%     end
+%     w_old=w_new;
+%     v_old=w_new;
+%     v_tot=[v_tot,v_new];
+%     w_tot=[w_tot,w_new];
+%end
+function M = getInertiaMatrix(T, qdot)
+    s = size(qdot,1);
+    for i=1:s
+        for j=i:s
+            if i == j
+                M(i,j) = diff(T,qdot(i),2);
+            else
+                temp = simplify(diff(T,qdot(i)));
+                M(i,j) = diff(temp, qdot(j));
+                M(j,i) = M(i,j); % symmetry
+            end
+        end
+    end
+end
+
+function [c,CTot]= getCorioli(M,q,qdot)
+% esempio chiamata [c,CTot]= getCorioli(M,[q1;q2;q3],[q1dot;q2dot;q3dot]);
+    n=size(M);
+    n=n(1);
+    dM_dqi = sym(zeros(size(M)));
+    c =sym(zeros(n, 1));
+    CTot = cell(1,n);
+    for i = 1:n
+        colonnaM = jacobian(M(:,i), q);
+        for j=1:n
+            derivataM=jacobian(M(:,j),q(i));
+            dM_dqi(:, j) = derivataM;
+            
+        end
+        C=simplify(0.5*(colonnaM+transpose(colonnaM)-dM_dqi));
+        CTot{i}=C;
+        c1=simplify(transpose(qdot)*C*qdot);
+        c(i)=c1;
+
+    end
+end
+
+
+function g=getEnergyPotential(u,q)
+%u è utot
+    g=simplify(transpose(jacobian(u,q)));
+end
+
+function val = sq_norm(vec)
+    n = norm(vec)^2;
+    val = simplify(n);
+end
+
+%DH-Matrix
+function [T, A] = DHMatrix(arrays)
+
+% T = DHMatrix(arrays) takes as inputs:
+%   -arrays: a n-vector of vectors composed like this: [alpha a d theta]
+% and outputs:
+%   -T: the product of all the matrices corresponding to each vector of arrays
+% Remember that:
+% cos(q1 + q2) = cos(q1)*cos(q2) - sin(q1)*sin(q2)
+% sin(q1 + q2) = cos(q1)*sin(q2) + cos(q2)*sin(q1)
+% making use of the simplify function these are converted automatically
+    T = eye(4);
+    nums = size(arrays);
+    
+    A = cell(1,nums(1));
+    
+    for i = 1:nums(1)
+        line = arrays(i, :);
+        R = [cos(line(4)) -cos(line(1))*sin(line(4)) sin(line(1))*sin(line(4)) line(2)*cos(line(4));
+             sin(line(4)) cos(line(1))*cos(line(4)) -sin(line(1))*cos(line(4)) line(2)*sin(line(4));
+             0 sin(line(1)) cos(line(1)) line(3);
+             0 0 0 1;];
+        A{i} = R;
+        T = T * R;   
+    end
+end
+
+%R = cell(1,numero_join); 
+%R{i} e ci metto dentro le matrici
+%w= cell(1,numero_join); 
+%wdot=cell(1,numero_join); 
+%a=cell(1,numero_join); 
+%ci metto dentro le variabili
+%vettore qdot e vettore qdotdorìt
+%r_DH ci metto tutti i parametri della quarta colonna A(1:3,4)
+%r_c distanza tra RFi e centro di massa
+function [u,ac,a_i,wdot_i,w_i,force_i,tau_i]=Netwon(R,w,wdot,a,sequenza,qdot,qdotdot,r_DH,r_c,force,tau,m,I)
+lunghezza = length(sequenza);
+ac= cell(1,lunghezza);
+u=cell(1,lunghezza);
+a_i=cell(1,lunghezza);
+wdot_i=cell(1,lunghezza);
+w_i=cell(1,lunghezza);
+force_i=cell(1,lunghezza+1);
+tau_i=cell(1,lunghezza+1);
+for i = 1:lunghezza
+    if(sequenza(i)=='r')
+        w{i+1}=transpose(R{i})*(w{i}+qdot(i)*[0;0;1]);
+       
+        w_i{i}=transpose(R{i})*(w{i}+qdot(i)*[0;0;1]);
+       
+        wdot{i+1}=transpose(R{i})*(wdot{i}+qdotdot(i,1)*[0;0;1]+cross(qdot(i,1)*w{i},[0;0;1]));
+        wdot_i{i}=transpose(R{i})*(wdot{i}+qdotdot(i,1)*[0;0;1]+cross(qdot(i,1)*w{i},[0;0;1]));
+        wdot_i{i}
+        a{i+1}=transpose(R{i})*a{i}+cross(wdot{i+1},r_DH{i})+cross(w{i+1},cross(w{i+1},r_DH{i}));
+        a_i{i}=transpose(R{i})*a{i}+cross(wdot{i+1},r_DH{i})+cross(w{i+1},cross(w{i+1},r_DH{i}));
+        
+        ac{i}=a{i+1}+cross(wdot{i+1},r_c{i})+cross(w{i+1},cross(w{i+1},r_c{i}));
+    else
+    
+    end
+end
+for i = lunghezza+1:-1:2
+    force{i-1}=R{i}*force{i}+m(i-1,1)*(a_i{i-1});
+    force_i{i-1}=R{i}*force{i}+m(i-1,1)*(a_i{i-1});
+    tau{i-1}=R{i}*tau{i}+cross(R{i}*force{i},r_c{i-1})-cross(force{i-1},(r_DH{i-1}+r_c{i-1}))+I(i-1,1)*wdot{i-1}+cross(w{i-1},I(i-1,1)*w{i-1});
+    tau_i{i-1}=R{i}*tau{i}+cross(R{i}*force{i},r_c{i-1})-cross(force{i-1},(r_DH{i-1}+r_c{i-1}))+I(i-1,1)*wdot{i-1}+cross(w{i-1},I(i-1,1)*w{i-1});
+    if(sequenza(i-1)=='r')
+        u{i-1}=transpose(tau{i-1})*(transpose(R{i-1})*[0;0;1]); %AGGIUNGERE ATTRIVTO FISCOSO Fvi*qdot
+    else
+        u{i}=0;
+    end
+    
+
+end
+end
+
+% R = cell(1,4); 
+% R{1}=[cos(q1) -sin(q1) 0;sin(q1) cos(q1) 0;0 0 1];
+% R{2}=[cos(q2) -sin(q2) 0;sin(q2) cos(q2) 0;0 0 1];
+% R{3}=[cos(q3) -sin(q3) 0;sin(q3) cos(q3) 0;0 0 1];
+% R{4}=[1 0 0;0 1 0;0 0 1];
+% w=cell(1,3);
+% w{1}=[0;0;0];
+% wdot=cell(1,3);
+% wdot{1}=[0;0;0];
+% a=cell(1,3);
+% a{1}=[-g0;0;0];
+% sequenza='rrr';
+% qdot=[q1dot;q2dot;q3dot];
+% qdot=subs(qdot,[q1dot,q2dot,q3dot],[0,0,0]);
+% qdotdot=[q1dotdot;q2dotdot;q3dotdot];
+% qdotdot=subs(qdotdot,[q1dotdot,q2dotdot,q3dotdot],[0,0,0]);
+% r_DH=cell(1,3);
+% r_DH{1}=[l1;0;0];
+% r_DH{2}=[l2;0;0];
+% r_DH{3}=[0;0;0];
+% r_c=cell(1,3);
+% r_c{1}=[d1-l1;0;0];
+% r_c{2}=[-l2+d2;0;0];
+% r_c{3}=[d3;0;0];
+% force=cell(1,4);
+% tau=cell(1,4);
+% force{4}=[0;0;0];
+% tau{4}=[0;0;0];
+% m=[m1;m2;m3];
+% I=[I1;I2;I3];
+% 
+% 
+% 
+% [u,ac,a_i,wdot_i,w_i,force_i,tau_i]=Netwon(R,w,wdot,a,sequenza,qdot,qdotdot,r_DH,r_c,force,tau,m,I);
