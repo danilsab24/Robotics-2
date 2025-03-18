@@ -1,0 +1,117 @@
+clear all
+clc
+
+%% Joint 3
+% 1) Declare symbolic variables
+syms q1 q2 q3 real    % joint coordinates
+syms dq1 dq2 dq3 real  % joint velocities
+
+% 2) Define the position p = (x, y, z)
+x = q1 + q3*cos(q2);
+y = q3*sin(q2);
+z = 0;  % always zero according to the definition
+
+% 3) Compute the velocity components (vx, vy, vz) 
+% by taking partial derivatives and multiplying by dq1, dq2, dq3
+
+vx = diff(x, q1)*dq1 + diff(x, q2)*dq2 + diff(x, q3)*dq3;
+vy = diff(y, q1)*dq1 + diff(y, q2)*dq2 + diff(y, q3)*dq3;
+vz = diff(z, q1)*dq1 + diff(z, q2)*dq2 + diff(z, q3)*dq3;
+
+% (Optional) Display the results
+disp('Joint 3');
+disp('p = [x; y; z] =');
+disp([x; y; z]);
+
+disp('Velocity (vx, vy, vz) =');
+disp([vx; vy; vz]);
+
+vect3 = [vx vy vz;];
+vect4 = [vx; vy; vz];
+pr3 = simplify(vect3 * vect4, Steps=100)
+
+%% joint 2
+% 1) Declare symbolic variables
+syms q1 q2 q3 d real    % joint coordinates
+syms dq1 dq2 dq3 I2 real % joint velocities
+
+% 2) Define the position p = (x, y, z)
+x2 = q1 + d*cos(q2);
+y2 = d*sin(q2);
+z2 = 0;  % always zero according to the definition
+
+% 3) Compute the velocity components (vx, vy, vz) 
+% by taking partial derivatives and multiplying by dq1, dq2, dq3
+
+vx2 = diff(x2, q1)*dq1 + diff(x2, q2)*dq2 + diff(x2, q3)*dq3;
+vy2 = diff(y2, q1)*dq1 + diff(y2, q2)*dq2 + diff(y2, q3)*dq3;
+vz2 = diff(z2, q1)*dq1 + diff(z2, q2)*dq2 + diff(z2, q3)*dq3;
+
+% (Optional) Display the results
+disp('Joint 2');
+disp('p = [x; y; z] =');
+disp([x2; y2; z2]);
+
+disp('Velocity (vx, vy, vz) =');
+disp([vx2; vy2; vz2]);
+
+vect1 = [vx2 vy2 vz2;];
+vect2 = [vx2; vy2; vz2];
+pro = vect1 * vect2
+
+%% Interial matrix
+syms m1 m2 m3 q1 q2 q3 d
+syms dq1 dq2 dq3 I2 I3 real 
+
+T = 0.5*m1*(dq1^2) +0.5*m2*pro+0.5*I2*(dq2^2) + 0.5*m3*pr3+0.5*I3*(dq2^2);
+
+M11 = diff(diff(T, dq1), dq1);
+M12 = diff(diff(T, dq1), dq2);
+M13 = diff(diff(T, dq1), dq3);
+
+M21 = diff(diff(T, dq2), dq1);
+M22 = diff(diff(T, dq2), dq2);
+M23 = diff(diff(T, dq2), dq3);
+
+M31 = diff(diff(T, dq3), dq1);
+M32 = diff(diff(T, dq3), dq2);
+M33 = diff(diff(T, dq3), dq3);
+
+% Combine into a matrix
+M = [M11, M12, M13;
+     M21, M22, M23;
+     M31, M32, M33];
+
+% Simplify the symbolic expressions
+M = simplify(M);
+
+disp('The inertia matrix M(q) is:');
+disp(M);
+
+%% Potential Energy
+syms m1 m2 m3 q1 q2 q3 g0 real
+syms dq1 dq2 dq3 I2 d real
+
+% Definizione delle energie potenziali parziali
+U1 = 0;
+U2 = m2*g0*d*sin(q2);
+U3 = m3*q3*sin(q2);
+
+% Energia potenziale totale
+U = U1 + U2 + U3;
+
+% Calcolo del vettore g(q) = (dU/dq)^T
+g_q = [
+    diff(U, q1);
+    diff(U, q2);
+    diff(U, q3)
+];
+
+% Visualizzazione del risultato
+disp('Il vettore g(q) = (∂U/∂q)^T è:');
+disp(g_q);
+
+
+
+    
+
