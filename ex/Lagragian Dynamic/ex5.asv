@@ -1,0 +1,45 @@
+clear all
+clc
+
+syms q1 q2 q3 l1 l2 l3 m1 m2 m3 d1 d2 d3 real
+syms dq1 dq2 dq3 real
+
+%% Kinetic energy of joint 1
+x1 = q1;
+y1 = 0;
+z1 = 0;
+
+vx1 = diff(x1, q1)*dq1 + diff(x1, q2)*dq2 + diff(x1, q3)*dq3;
+vy1 = diff(y1, q1)*dq1 + diff(y1, q2)*dq2 + diff(y1, q3)*dq3;
+vz1 = diff(z1, q1)*dq1 + diff(z1, q2)*dq2 + diff(z1, q3)*dq3;
+
+T1 = 0.5*m1*([vx1; vy1; vz1;]
+
+disp('velocity of joint 1: ');
+disp([vx1; vy1; vz1;]);
+
+%% Kinetic energy of joint 2
+x2 = q1 + d2*cos(q2);
+y2 = d2*sin(q2);
+z2 = q2;
+
+vx2 = diff(x2, q1)*dq1 + diff(x2, q2)*dq2 + diff(x2, q3)*dq3;
+vy2 = diff(y2, q1)*dq1 + diff(y2, q2)*dq2 + diff(y2, q3)*dq3;
+vz2 = diff(z2, q1)*dq1 + diff(z2, q2)*dq2 + diff(z2, q3)*dq3;
+
+disp('velocity of joint 2: ');
+disp([vx2; vy2; vz2;]);
+
+%% Kinetic energy of joint 3
+x3 = q1 + l2*cos(q2) + d3*cos(q2+q3);
+y3 = l2*sin(q2) + d3*sin(q2+q3);
+z3 = 0;
+
+vx3 = diff(x3, q1)*dq1 + diff(x3, q2)*dq2 + diff(x3, q3)*dq3;
+vy3 = diff(y3, q1)*dq1 + diff(y3, q2)*dq2 + diff(y3, q3)*dq3;
+vz3 = diff(z3, q1)*dq1 + diff(z3, q2)*dq2 + diff(z3, q3)*dq3;
+
+disp('velocity of joint 3: ');
+disp([vx3; vy3; vz3;]);
+
+%% Inertia Matrix
