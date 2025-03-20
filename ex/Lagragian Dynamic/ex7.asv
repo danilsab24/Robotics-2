@@ -1,0 +1,73 @@
+clear all
+clc
+
+clear all
+clc
+
+syms q1 q2 q3 l1 l2 l3 m1 m2 m3 d1 d2 d3  I1 I2 I3 g0 real
+syms dq1 dq2 dq3 real
+
+%% Kinetic energy of joint 1
+x1 = d1*cos(q1);
+y1 = d1*sin(q1);
+z1 = q1;
+
+vx1 = diff(x1, q1)*dq1 + diff(x1, q2)*dq2 + diff(x1, q3)*dq3;
+vy1 = diff(y1, q1)*dq1 + diff(y1, q2)*dq2 + diff(y1, q3)*dq3;
+vz1 = diff(z1, q1)*dq1 + diff(z1, q2)*dq2 + diff(z1, q3)*dq3;
+
+T1 = 0.5*m1*[vx1 vy1 0]*[vx1; vy1; 0;]+0.5*I1*[0 0 vz1]*[0; 0; vz1;];
+
+disp('velocity of joint 1: ');
+disp([vx1; vy1; vz1;]);
+
+disp('Kinetic Energy of joint 1: ');
+disp(T1);
+
+%% Kinetic energy of joint 2
+x2 = l1*cos(q1);
+y2 = l1*sin(q1);
+z2 = q1+q2;
+
+vx2 = diff(x2, q1)*dq1 + diff(x2, q2)*dq2 + diff(x2, q3)*dq3;
+vy2 = diff(y2, q1)*dq1 + diff(y2, q2)*dq2 + diff(y2, q3)*dq3;
+vz2 = diff(z2, q1)*dq1 + diff(z2, q2)*dq2 + diff(z2, q3)*dq3;
+
+T2 = 0.5*m2*[vx2 vy2 0;]*[vx2; vy2; 0;] + 0.5*I2*[0 0 vz2;]*[0; 0; vz2;];
+
+disp('velocity of joint 2: ');
+disp([vx2; vy2; vz2;]);
+
+disp('Kinetic Energy of joint 2: ');
+disp(T2);
+
+%% Inertia Matrix
+T = T1 + T2
+M11 = diff(diff(T, dq1), dq1);
+M12 = diff(diff(T, dq1), dq2);
+
+M21 = diff(diff(T, dq2), dq1);
+M22 = diff(diff(T, dq2), dq2);
+
+M31 = diff(diff(T, dq3), dq1);
+M32 = diff(diff(T, dq3), dq2);
+
+M = [M11, M12;
+     M21, M22;];
+
+M = simplify(M);
+
+disp('The inertia matrix M(q) is:');
+disp(M);
+
+%% Gravity terms
+% U1 = m1*g0*y1;
+% U2 = m2*g0*y2;
+% U3 = m3*g0*y3;
+% 
+% U = [U1+U2+U3];
+% g_q = simplify([diff(U,q1); diff(U,q2); diff(U,q3);], Steps=100);
+% 
+% disp('Gravity terms g(q): ');
+% disp(g_q);
+
