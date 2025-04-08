@@ -1,41 +1,10 @@
-clear all
-clc
-
-%% ------------------------------
-% JOINT 3 KINEMATICS
-% ------------------------------
-syms q1 q2 q3 real    % joint coordinates
+syms q1 q2 q3 l2 real    % joint coordinates
 syms dq1 dq2 dq3 real % joint velocities
-
-% Position p3 = (x, y, z)
-x3 = q1 + q3*cos(q2);
-y3 = q3*sin(q2);
-z3 = 0;  % always zero according to your definition
-
-% Velocity components (vx3, vy3, vz3)
-vx3 = diff(x3, q1)*dq1 + diff(x3, q2)*dq2 + diff(x3, q3)*dq3;
-vy3 = diff(y3, q1)*dq1 + diff(y3, q2)*dq2 + diff(y3, q3)*dq3;
-vz3 = diff(z3, q1)*dq1 + diff(z3, q2)*dq2 + diff(z3, q3)*dq3;
-
-disp('Joint 3:');
-disp('p3 = [x3; y3; z3] =');
-disp([x3; y3; z3]);
-disp('Velocity (vx3, vy3, vz3) =');
-disp([vx3; vy3; vz3]);
-
-vect3 = [vx3 vy3 vz3];
-vect4 = [vx3; vy3; vz3];
-pr3 = simplify(vect3 * vect4, 'Steps',100);
-
-
-%% ------------------------------
-% JOINT 2 KINEMATICS
-% ------------------------------
 syms d I2 real
 
-% Position p2 = (x2, y2, z2)
-x2 = q1 + d*cos(q2);
-y2 = d*sin(q2);
+% Joint 2
+x2 = d*cos(q2);
+y2 = q1 + d*sin(q2);
 z2 = 0;  
 
 % Velocity components (vx2, vy2, vz2)
@@ -53,10 +22,27 @@ vect1 = [vx2 vy2 vz2];
 vect2 = [vx2; vy2; vz2];
 pro   = vect1 * vect2;
 
+% Joint 3
+x3 = l2*cos(q2) - q3*sin(q2);
+y3 = q1 + l2*sin(q2) + q3*cos(q2);
+z3 = 0;  
 
-%% ------------------------------
+% Velocity components (vx3, vy3, vz3)
+vx3 = diff(x3, q1)*dq1 + diff(x3, q2)*dq2 + diff(x3, q3)*dq3;
+vy3 = diff(y3, q1)*dq1 + diff(y3, q2)*dq2 + diff(y3, q3)*dq3;
+vz3 = diff(z3, q1)*dq1 + diff(z3, q2)*dq2 + diff(z3, q3)*dq3;
+
+disp('Joint 3:');
+disp('p3 = [x3; y3; z3] =');
+disp([x3; y3; z3]);
+disp('Velocity (vx3, vy3, vz3) =');
+disp([vx3; vy3; vz3]);
+
+vect3 = [vx3 vy3 vz3];
+vect4 = [vx3; vy3; vz3];
+pr3 = simplify(vect3 * vect4, 'Steps',100);
+
 % INERTIA MATRIX M(q)
-% ------------------------------
 syms m1 m2 m3 I3 real
 
 % Total kinetic energy:
@@ -92,27 +78,6 @@ M = simplify(M);
 
 disp('The inertia matrix M(q) is:');
 disp(M);
-
-
-%% ------------------------------
-% POTENTIAL ENERGY & GRAVITY VECTOR
-% ------------------------------
-syms g0 real
-
-U1 = 0;
-U2 = m2*g0*d*sin(q2);
-U3 = m3*g0*q3*sin(q2);
-
-U = U1 + U2 + U3;
-
-g_q = [
-    diff(U, q1);
-    diff(U, q2);
-    diff(U, q3)
-];
-disp('Gravity vector g(q) = ∂U/∂q =');
-disp(g_q);
-
 
 %% ------------------------------
 % CORIOLIS/CENTRIFUGAL VECTOR c(q,dq)
